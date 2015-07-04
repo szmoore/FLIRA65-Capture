@@ -7,6 +7,9 @@ import cgi
 import status as s
 import subprocess
 import datetime
+import shutil
+
+import zipfile
 
 try:
 	g_help_text = open("help", "r").read().replace("\n", "\\n")	
@@ -38,13 +41,27 @@ def green(text):
 def bold(text):
 	return '<b>'+str(text)+'</b>'
 
-def link(text):
-	return '<a href="%s">%s</a>' % (str(text), str(text))
+def link(text, value=None):
+	if value == None:
+		value = text
+	return '<a href="%s">%s</a>' % (str(text), str(value))
 
 def parse_form(form):
-	s.load()
-
-	s.save()
+	#s.load()
+	for k in form.keys():
+		if not is_experiment(k):
+			continue
+			
+		if form.getvalue(k) == 'Download':
+			print(bold("<p>"+link("download.zip","Click to Download "+k)+"</p>"))
+			shutil.make_archive("download", "zip", root_dir=".", base_dir=k)
+		elif form.getvalue(k) == 'Delete':
+			if k+"_confirm_delete" in form.keys() and form.getvalue(k+"_confirm_delete") == "Yes":
+				print(bold("<p>Delete %s CONFIRMED</p>" % k))
+				shutil.rmtree(k)
+			else:
+				print(bold(red("<p>Delete %s UNCONFIRMED</p>" % k)))
+	#s.save()
 	
 def reload_page(timeout):
 	print("<script type='text/javascript'>")
@@ -57,19 +74,24 @@ def reload_page(timeout):
 	sys.exit(os.system("./run.py"))
 		
 	
-
+def submit(name, value, color='black'):
+	return "<input type='submit' name='%s' value='%s' style='color:%s; font-weight:bold;'/>" % (str(name), str(value), str(color))
 	
+def is_experiment(path):
+	return os.path.isdir(path) and "experiment" in os.listdir(path) and os.path.isfile(path+"/experiment")
 
 if __name__ == "__main__":
 	#sys.stderr = open("index.err", "w", 0)
 	print("Content-type: text/html\r\n\r\n")
 
 	form = cgi.FieldStorage()
-
+	if len(form) > 0:
+		parse_form(form)
+		#reload_page(1000)
 		
 
 	boilerplate_start()
-	
+	print("<form action='manage.cgi'>")
 	print("<pre>")
 	print("<b>Experiment Directories</b>")
 	print("<hr>")
@@ -77,15 +99,18 @@ if __name__ == "__main__":
 		if "experiment" not in files:
 			continue
 		experiment_state = open(root+"/experiment", "r").read().strip()
+		pad = " "*(30-len(root))
 		if experiment_state == "Running":
-			print(bold("Running: ")+link(root)+"\t<button>"+bold("Download")+"</button>")
+			print(bold("Running:  ")+link(root)+pad+submit(root, "Download"))
 		else:
-			print(bold(green("Finished: "))+link(root)+"\t<button>"+bold("Download")+"</button>\t<button>"+bold(red("Delete"))+"</button>")
+			print(bold(green("Finished: "))+link(root)+pad+submit(root, "Download")+"\t"+submit(root, "Delete", "red")+
+				red("<input type='checkbox' name='"+root+"_confirm_delete' value='Yes'/>Confirm Deletion"))
 		for d in dirs:
 			print(" --- "+str(d))
 		
 	print("<hr>")
 	print("</pre>")
+	print("</form>")
 	
 
 

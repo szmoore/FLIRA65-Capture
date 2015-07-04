@@ -6,3 +6,5 @@ status.db
 log.err
 log.out
 *.o
+*.png
+download.zip
