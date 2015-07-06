@@ -18,6 +18,7 @@ static int arv_option_height = -1;
 static int arv_option_horizontal_binning = -1;
 static int arv_option_vertical_binning = -1;
 static int arv_option_max_frames = 1;
+static int arv_option_max_errors_before_abort = 5;
 static char * arv_option_save_prefix = "latest";
 static char * arv_option_save_type = "png";
 
@@ -215,6 +216,7 @@ main (int argc, char **argv)
 		signal (SIGINT, set_cancel);
 
 		int captured_frames = 0;
+		int errors = 0;
 		#define _CAN_STOP (arv_option_max_frames > 0 && captured_frames >= arv_option_max_frames)
 		do {
 			g_usleep (100000);
@@ -225,6 +227,7 @@ main (int argc, char **argv)
 				ArvBufferStatus status = arv_buffer_get_status(buffer);
 				if (status == ARV_BUFFER_STATUS_SUCCESS)
 				{
+					errors = 0;
 					if (save_buffer_fn != NULL)
 					{
 						char filename[BUFSIZ];
@@ -234,8 +237,12 @@ main (int argc, char **argv)
 					}
 					captured_frames++;
 				}
+				else if (++errors > arv_option_max_errors_before_abort)
+				{
+					set_cancel()
+				}
 				arv_stream_push_buffer (stream, buffer);
-			} while (buffer != NULL && !_CAN_STOP);
+			} while (!cancel && buffer != NULL && !_CAN_STOP);
 		} while (!cancel && !_CAN_STOP);
 		#undef _CAN_STOP
 
@@ -256,5 +263,6 @@ main (int argc, char **argv)
 	} else
 		g_print ("No device found\n");
 
-	return 0;
+	
+	return (errors > 0);
 }

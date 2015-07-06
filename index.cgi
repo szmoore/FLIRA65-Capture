@@ -31,7 +31,7 @@ def boilerplate_end():
 		print("<pre>")
 		print("<b>Latest Image</b>")
 		print("<hr>")
-		print('<img src="latest0.png"/>')
+		print('<img src="latest0.png" width="40%"/>')
 		print("</hr>")
 		print("</div>")
 
@@ -61,6 +61,16 @@ def parse_form(form):
 		s.status = None
 		s.save()
 		return
+
+	dir = form.getvalue("directory")
+	dir = os.path.abspath(dir)
+	root = os.getcwd()
+	if dir[0:len(root)] != root or dir.count("/") <= root.count("/"):
+		print(bold(red("Invalid data directory; must be below root.")))
+		s.status = None
+		s.save()
+		return
+		
 
 	keys = ["directory", "maxFrames"]
 	s.status = {}

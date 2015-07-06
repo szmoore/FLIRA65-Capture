@@ -57,6 +57,13 @@ def parse_form(form):
 			shutil.make_archive("download", "zip", root_dir=".", base_dir=k)
 		elif form.getvalue(k) == 'Delete':
 			if k+"_confirm_delete" in form.keys() and form.getvalue(k+"_confirm_delete") == "Yes":
+				# Only delete paths lower than the current wd
+				root = os.getcwd()
+				k = os.path.abspath(k)
+				if k[0:len(root)] != root or k.count("/") <= root.count("/"):
+					print(bold(red("<p> Path to delete not below root!</p>")))
+					return
+
 				print(bold("<p>Delete %s CONFIRMED</p>" % k))
 				shutil.rmtree(k)
 			else:

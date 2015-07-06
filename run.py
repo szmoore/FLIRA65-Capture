@@ -18,6 +18,7 @@ def cleanup(signal, frame):
 	sys.exit(0)
 
 def main(argv):
+	os.environ["LD_LIBRARY_PATH"] = os.environ.get("LD_LIBRARY_PATH", "")+":"+os.getcwd()+"/contrib/lib"
 	signal.signal(signal.SIGINT, cleanup)
 	signal.signal(signal.SIGQUIT, cleanup)
 	if s.status == None:	
