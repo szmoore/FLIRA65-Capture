@@ -10,7 +10,7 @@ set_cancel (int signal)
 	cancel = TRUE;
 }
 
-static char *arv_option_camera_name = NULL;
+static char *arv_option_camera_name = "FLIR Systems AB-62600164";
 static char *arv_option_debug_domains = NULL;
 static gboolean arv_option_auto_buffer = FALSE;
 static int arv_option_width = -1;
@@ -95,6 +95,8 @@ main (int argc, char **argv)
 		g_print ("Looking for camera '%s'\n", arv_option_camera_name);
 
 	device = arv_open_device (arv_option_camera_name);
+	
+	int errors = 0;
 	if (device != NULL) {
 		ArvGc *genicam;
 		ArvGcNode *node;
@@ -111,6 +113,7 @@ main (int argc, char **argv)
 		gboolean v_boolean;
 
 		genicam = arv_device_get_genicam (device);
+		#if 0
 
 		if (arv_option_width > 0) {
 			node = arv_gc_get_node (genicam, "Width");
@@ -186,6 +189,7 @@ main (int argc, char **argv)
 			v_boolean = arv_gc_boolean_get_value (ARV_GC_BOOLEAN (node), NULL);
 			g_print ("reverse x          = %s\n", v_boolean ? "TRUE" : "FALSE");
 		}
+		#endif //0
 
 		stream = arv_device_create_stream (device, NULL, NULL);
 		if (arv_option_auto_buffer)
@@ -216,7 +220,6 @@ main (int argc, char **argv)
 		signal (SIGINT, set_cancel);
 
 		int captured_frames = 0;
-		int errors = 0;
 		#define _CAN_STOP (arv_option_max_frames > 0 && captured_frames >= arv_option_max_frames)
 		do {
 			g_usleep (100000);
@@ -239,7 +242,7 @@ main (int argc, char **argv)
 				}
 				else if (++errors > arv_option_max_errors_before_abort)
 				{
-					set_cancel()
+					set_cancel(SIGQUIT);
 				}
 				arv_stream_push_buffer (stream, buffer);
 			} while (!cancel && buffer != NULL && !_CAN_STOP);

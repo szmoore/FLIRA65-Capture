@@ -62,6 +62,18 @@ def parse_form(form):
 		s.save()
 		return
 
+	if form.getvalue("submitted") == "SINGLE":
+		os.environ["LD_LIBRARY_PATH"] = os.environ.get("LD_LIBRARY_PATH", "")+":"+os.getcwd()+"/contrib/lib"
+		if os.path.exists("latest0.png"):
+			os.unlink("latest0.png")
+		error = subprocess.call(["./FLIRA65-Capture", "-f", "1", "-p", "latest"])
+		if error != 0:
+			print(bold(red("Error %d performing capture" % error)))
+		return
+
+		
+				
+	
 	dir = form.getvalue("directory")
 	dir = os.path.abspath(dir)
 	root = os.getcwd()
@@ -158,6 +170,9 @@ if __name__ == "__main__":
 	print("<hr>")
 	print("<input id='submitted' name='submitted' type='text' value='' style='display:none;'/>")
 	print("<input id='submit' type='submit' value='%s EXPERIMENT' onclick='document.getElementById(\"submit\").value=\"%s\"; document.getElementById(\"submitted\").value=\"%s\"'/>" % (action, action+"ING", action+"ING"))
+	if s.status == None:
+		print("<input id='submit' type='submit' value='SINGLE CAPTURE' onclick='document.getElementById(\"submitted\").value=\"SINGLE\"'/>")
+	
 	print("</pre>")
 
 	boilerplate_end()
