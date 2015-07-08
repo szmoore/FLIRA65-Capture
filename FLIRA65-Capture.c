@@ -18,9 +18,9 @@ static int arv_option_height = -1;
 static int arv_option_horizontal_binning = -1;
 static int arv_option_vertical_binning = -1;
 static int arv_option_max_frames = 1;
-static int arv_option_max_errors_before_abort = 5;
+static int arv_option_max_errors_before_abort = 1000000000;
 static char * arv_option_save_prefix = "latest";
-static char * arv_option_save_type = "png";
+static char * arv_option_save_type = "raw";
 
 typedef void(*SaveBuffer)(ArvBuffer*, const char*);
 static SaveBuffer save_buffer_fn = NULL;
@@ -29,6 +29,8 @@ static SaveBuffer GetSaveBufferFn(const char * type)
 {
 	if (strcmp(type, "png") == 0)
 		return arv_buffer_save_png;
+	if (strcmp(type, "raw") == 0)
+		return arv_buffer_save_raw;
 	return NULL;
 }
 
@@ -228,6 +230,7 @@ main (int argc, char **argv)
 				buffer = arv_stream_pop_buffer (stream);
 				if (buffer == NULL) break;
 				ArvBufferStatus status = arv_buffer_get_status(buffer);
+				fprintf(stderr, "Status is %d", status);
 				if (status == ARV_BUFFER_STATUS_SUCCESS)
 				{
 					errors = 0;

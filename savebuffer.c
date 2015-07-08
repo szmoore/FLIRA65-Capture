@@ -41,3 +41,17 @@ void arv_buffer_save_png(ArvBuffer * buffer, const char * filename)
 	png_write_end(png_ptr, NULL); // cleanup
 	fclose(f);
 }
+
+void arv_buffer_save_raw(ArvBuffer * buffer, const char * filename)
+{	
+	size_t buffer_size;
+	char * buffer_data = (char*)arv_buffer_get_data(buffer, &buffer_size); // raw data
+	int width; int height;
+	arv_buffer_get_image_region(buffer, NULL, NULL, &width, &height); // get width/height
+	int bit_depth = ARV_PIXEL_FORMAT_BIT_PER_PIXEL(arv_buffer_get_image_pixel_format(buffer)); // bit(s) per pixel
+	
+	FILE * f = fopen(filename, "wb");
+	assert(f != NULL);
+	fwrite(buffer_data, 1, buffer_size, f);
+	fclose(f);		
+}
