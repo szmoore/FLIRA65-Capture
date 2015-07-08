@@ -31,7 +31,7 @@ def boilerplate_end():
 		print("<pre>")
 		print("<b>Latest Image</b>")
 		print("<hr>")
-		print('<img src="latest0.png" width="40%"/>')
+		print('<img src="latest0.png?'+datetime.datetime.now().strftime("%s")+'" width="40%"/>')
 		print("</hr>")
 		print("</div>")
 
@@ -66,7 +66,7 @@ def parse_form(form):
 		os.environ["LD_LIBRARY_PATH"] = os.environ.get("LD_LIBRARY_PATH", "")+":"+os.getcwd()+"/contrib/lib"
 		if os.path.exists("latest0.png"):
 			os.unlink("latest0.png")
-		error = subprocess.call(["./FLIRA65-Capture", "-f", "1", "-p", "latest"])
+		error = subprocess.call(["./FLIRA65-Capture", "-f", "1", "-p", "latest", "-t", "png"])
 		if error != 0:
 			print(bold(red("Error %d performing capture" % error)))
 		return
@@ -128,7 +128,8 @@ def run_daemon():
 	os.dup2(se.fileno(), sys.stderr.fileno())
 	os.chdir(oldcwd)
 	sys.exit(os.system("./run.py"))
-		
+	# stdout seems to often get flushed twice :S 
+	# but this is CGI and firefox ignores everything after the first </html> so it's all good...
 	
 
 	

@@ -1,5 +1,10 @@
+// Aravis capture program.
+
+#define _POSIX_C_SOURCE 200809L
+
 #include <aravis-0.4/arv.h>
 #include <stdlib.h>
+#include <time.h>
 #include "savebuffer.h"
 
 static gboolean cancel = FALSE;
@@ -19,8 +24,9 @@ static int arv_option_horizontal_binning = -1;
 static int arv_option_vertical_binning = -1;
 static int arv_option_max_frames = 1;
 static int arv_option_max_errors_before_abort = 10;
-static char * arv_option_save_prefix = "latest";
-static char * arv_option_save_type = "raw";
+static char * arv_option_save_dir = ".";
+static char * arv_option_save_prefix = "";
+static char * arv_option_save_type = "png";
 
 typedef void(*SaveBuffer)(ArvBuffer*, const char*);
 static SaveBuffer save_buffer_fn = NULL;
@@ -51,7 +57,8 @@ static const GOptionEntry arv_option_entries[] =
 	{ "debug", 		'd', 0, G_OPTION_ARG_STRING,
 		&arv_option_debug_domains, 	"Debug mode", NULL },
 	{ "frames",	'f',0, G_OPTION_ARG_INT, &arv_option_max_frames, "Number of frames to save", NULL},
-	{ "prefix", 'p',0, G_OPTION_ARG_STRING, &arv_option_save_prefix, "Prefix for frame files", NULL},
+	{ "directory", 'D', 0, G_OPTION_ARG_STRING, &arv_option_save_dir, "Directory for frame files (defaults to .)", NULL},
+	{ "prefix", 'p',0, G_OPTION_ARG_STRING, &arv_option_save_prefix, "Prefix for frame files (defaults to Timestamp)", NULL},
 	{ "type", 't',0, G_OPTION_ARG_STRING, &arv_option_save_type, "Type of file to save frames as", NULL},
 	{ "errors", 'e', 0, G_OPTION_ARG_INT, &arv_option_max_errors_before_abort, "Errors before aborting", NULL},
 	{ NULL }
@@ -125,8 +132,8 @@ int main (int argc, char **argv)
 	int captured_frames = 0;
 	guint64 timeout=1000000;
 	#define _CAN_STOP (arv_option_max_frames > 0 && captured_frames >= arv_option_max_frames)
+	arv_camera_start_acquisition(camera);
 	do {
-		arv_camera_start_acquisition(camera);
 		g_usleep (100000);
 			do  {
 			buffer = arv_stream_timeout_pop_buffer (stream, timeout);
@@ -135,12 +142,24 @@ int main (int argc, char **argv)
 			fprintf(stderr, "Status is %d\n", status);
 			if (status == ARV_BUFFER_STATUS_SUCCESS)
 			{
+		
+				
+				
 				if (timeout > 100000) timeout -= 1000;
 				errors = 0;
 				if (save_buffer_fn != NULL)
 				{
+					struct timespec timestamp;
+					clock_gettime(CLOCK_REALTIME, &timestamp);
 					char filename[BUFSIZ];
-					sprintf(filename, "%s%d.%s", arv_option_save_prefix, captured_frames, arv_option_save_type);
+					if (strcmp(arv_option_save_prefix,"") != 0)
+					{
+						sprintf(filename, "%s/%s%d.%s", arv_option_save_dir,arv_option_save_prefix, captured_frames, arv_option_save_type);
+					}
+					else
+					{
+						sprintf(filename, "%s/%d.%03ld.%s", arv_option_save_dir, (int)timestamp.tv_sec, (long)(timestamp.tv_nsec/1.0e6), arv_option_save_type);
+					}
 					(*save_buffer_fn)(buffer, filename);
 					g_print("Saved frame %d to %s\n", captured_frames, filename);
 				}
@@ -150,17 +169,24 @@ int main (int argc, char **argv)
 			{
 				if (timeout < 10000000) timeout+=1000;
 				fprintf(stderr, "%d errors out of %d allowed\n", errors, arv_option_max_errors_before_abort);
+				arv_camera_stop_acquisition(camera);
 				if (++errors > arv_option_max_errors_before_abort && arv_option_max_errors_before_abort >= 0)
 				{
 					set_cancel(SIGQUIT);
 				}
+				else
+				{
+					arv_camera_start_acquisition(camera);
+				}
 			}
 			arv_stream_push_buffer (stream, buffer);
 			
-			arv_camera_stop_acquisition(camera);
+			
 			
 		} while (!cancel && buffer != NULL && !_CAN_STOP);
 	} while (!cancel && !_CAN_STOP);
+	arv_camera_stop_acquisition(camera);
+
 
 	guint64 n_processed_buffers; guint64 n_failures; guint64 n_underruns;
 	arv_stream_get_statistics (stream, &n_processed_buffers, &n_failures, &n_underruns);
