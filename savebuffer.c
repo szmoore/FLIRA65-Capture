@@ -1,12 +1,23 @@
 #include "savebuffer.h"
 #include <assert.h>
+#include <sys/statvfs.h>
+
+size_t get_free_space()
+{
+	struct statvfs buf;
+	if (statvfs("/", &buf) != 0)
+		return 0;
+	return buf.f_bsize*buf.f_bfree;
+}
 
 /**
  * Reads image data from an Aravis ArvBuffer and saves a png file to filename
  * TODO: Add error checking and all that stuff (this code is demonstrative)
  */
-void arv_buffer_save_png(ArvBuffer * buffer, const char * filename)
+bool arv_buffer_save_png(ArvBuffer * buffer, const char * filename)
 {
+	fprintf(stderr,"Free space is %d\n", get_free_space());
+	if (get_free_space() < 50000000) return false;
 	// TODO: This only works on image buffers
 	assert(arv_buffer_get_payload_type(buffer) == ARV_BUFFER_PAYLOAD_TYPE_IMAGE);
 	
@@ -30,6 +41,7 @@ void arv_buffer_save_png(ArvBuffer * buffer, const char * filename)
 	png_set_IHDR(png_ptr, info_ptr, width, height, bit_depth, color_type,
 		PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 	png_write_info(png_ptr, info_ptr);
+
 	
 	// Need to create pointers to each row of pixels for libpng
 	png_bytepp rows = (png_bytepp)(png_malloc(png_ptr, height*sizeof(png_bytep)));
@@ -40,10 +52,12 @@ void arv_buffer_save_png(ArvBuffer * buffer, const char * filename)
 	png_write_image(png_ptr, rows);
 	png_write_end(png_ptr, NULL); // cleanup
 	fclose(f);
+	return true;
 }
 
-void arv_buffer_save_raw(ArvBuffer * buffer, const char * filename)
+bool arv_buffer_save_raw(ArvBuffer * buffer, const char * filename)
 {	
+	if (get_free_space() < 50000000) return false;
 	size_t buffer_size;
 	char * buffer_data = (char*)arv_buffer_get_data(buffer, &buffer_size); // raw data
 	int width; int height;
@@ -54,4 +68,5 @@ void arv_buffer_save_raw(ArvBuffer * buffer, const char * filename)
 	assert(f != NULL);
 	fwrite(buffer_data, 1, buffer_size, f);
 	fclose(f);		
+	return true;
 }

@@ -66,7 +66,7 @@ def parse_form(form):
 		os.environ["LD_LIBRARY_PATH"] = os.environ.get("LD_LIBRARY_PATH", "")+":"+os.getcwd()+"/contrib/lib"
 		if os.path.exists("latest0.png"):
 			os.unlink("latest0.png")
-		error = subprocess.call(["./FLIRA65-Capture", "-f", "1", "-p", "latest", "-t", "png"])
+		error = subprocess.call(["./FLIRA65-Capture", "-e", "100", "-f", "1", "-p", "latest", "-t", "png"])
 		if error != 0:
 			print(bold(red("Error %d performing capture" % error)))
 		return
