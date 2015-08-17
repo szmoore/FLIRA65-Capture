@@ -15,6 +15,7 @@ void arv_buffer_save_png(ArvBuffer * buffer, const char * filename)
 	int width; int height;
 	arv_buffer_get_image_region(buffer, NULL, NULL, &width, &height); // get width/height
 	int bit_depth = ARV_PIXEL_FORMAT_BIT_PER_PIXEL(arv_buffer_get_image_pixel_format(buffer)); // bit(s) per pixel
+	fprintf(stderr, "Bit depth is %d\n", bit_depth);
 	//TODO: Deal with non-png compliant pixel formats?
 	// EG: ARV_PIXEL_FORMAT_MONO_14 is 14 bits per pixel, so conversion to PNG loses data
 	

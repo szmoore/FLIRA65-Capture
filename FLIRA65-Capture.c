@@ -125,6 +125,19 @@ int main (int argc, char **argv)
 		arv_stream_push_buffer (stream, arv_buffer_new (payload_size, NULL));
 	}
 
+	// set the bit depth
+	ArvDevice * device = arv_camera_get_device(camera);
+	ArvGcNode * feature = arv_device_get_feature(device, "PixelFormat");
+	arv_gc_feature_node_set_value_from_string(ARV_GC_FEATURE_NODE(feature), "Mono16", NULL);
+	
+	feature = arv_device_get_feature(device, "TemperatureLinearMode");
+	arv_gc_feature_node_set_value_from_string(ARV_GC_FEATURE_NODE(feature), "On", NULL);
+	
+	feature = arv_device_get_feature(device, "TemperatureLinearResolution");
+	arv_gc_feature_node_set_value_from_string(ARV_GC_FEATURE_NODE(feature), "High", NULL);
+
+	feature = arv_device_get_feature(device, "ImageAdjustMethod");
+	arv_gc_feature_node_set_value_from_string(ARV_GC_FEATURE_NODE(feature), "Linear", NULL);
 
 	signal (SIGINT, set_cancel);
 	signal (SIGQUIT, set_cancel);
