@@ -28,7 +28,7 @@ static char * arv_option_save_dir = ".";
 static char * arv_option_save_prefix = "";
 static char * arv_option_save_type = "png";
 
-typedef void(*SaveBuffer)(ArvBuffer*, const char*);
+typedef bool(*SaveBuffer)(ArvBuffer*, const char*);
 static SaveBuffer save_buffer_fn = NULL;
 
 static SaveBuffer GetSaveBufferFn(const char * type)
@@ -173,7 +173,11 @@ int main (int argc, char **argv)
 					{
 						sprintf(filename, "%s/%d.%03ld.%s", arv_option_save_dir, (int)timestamp.tv_sec, (long)(timestamp.tv_nsec/1.0e6), arv_option_save_type);
 					}
-					(*save_buffer_fn)(buffer, filename);
+					if ((*save_buffer_fn)(buffer, filename) == false)
+					{
+						g_print("Couldn't save frame %d to %s\n", captured_frames, filename);
+						set_cancel(SIGQUIT);
+					}
 					g_print("Saved frame %d to %s\n", captured_frames, filename);
 				}
 				captured_frames++;
