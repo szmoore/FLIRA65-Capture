@@ -36,6 +36,7 @@ bool arv_buffer_save_png(ArvBuffer * buffer, const char * filename)
 	// boilerplate libpng stuff without error checking (setjmp? Seriously? How many kittens have to die?)
 	png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 	png_infop info_ptr = png_create_info_struct(png_ptr);
+	unlink(filename);
 	FILE * f = fopen(filename, "wb");
 	assert(f != NULL);
 	png_init_io(png_ptr, f);

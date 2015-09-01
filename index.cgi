@@ -16,22 +16,30 @@ except:
 
 def boilerplate_start():
 	print("<html><head><title>FLIRA65 Capture Control</title></head>");
-	print('<body bgcolor="#99cc99" text="#000000" link="#2020ff" vlink="#4040cc">')
+	print('<body bgcolor="#99cc99" text="#000000" link="#2020ff" vlink="#4040cc" onload="loadTime()">')
 	print('<div style="width:50%; align:float-left; border:1px solid black;">') 
 	print("<h1>FLIRA65 Capture Control</h1>")
 	print("<p>")
 	print('<button onclick="alert(\'%s\')"><b>HELP</b></button>' % str(g_help_text))
 	print('<a href="manage.cgi"><button>Manage data files</button></a>')
+	
+	print("<script type='text/javascript'>")
+	print("function loadTime() {")
+	print("var now = new Date();")
+	print('var strDateTime = [[now.getFullYear(), AddZero(now.getMonth() + 1), AddZero(now.getDate()) ].join("-"), [AddZero(now.getHours()), AddZero(now.getMinutes()), AddZero(now.getSeconds())].join(":"), now.getHours() >= 12 ? "PM" : "AM"].join(" ");')
+	print('document.getElementById("date").value = strDateTime;}')
+	print('function AddZero(num) {return (num >= 0 && num < 10) ? "0" + num : num + "";}')
+	print("</script>")
 
 
 def boilerplate_end():
 	print("</div>")
-	if os.path.isfile("latest0.png"):
+	if os.path.isfile("latest.png"):
 		print('<div style="width:50%; align:float-right; border:1px solid black;">')
 		print("<pre>")
 		print("<b>Latest Image</b>")
 		print("<hr>")
-		print('<img src="latest0.png?'+datetime.datetime.now().strftime("%s")+'" width="40%"/>')
+		print('<img src="latest.png?'+datetime.datetime.now().strftime("%s")+'" width="40%"/>')
 		print("</hr>")
 		print("</div>")
 
@@ -66,7 +74,7 @@ def parse_form(form):
 		os.environ["LD_LIBRARY_PATH"] = os.environ.get("LD_LIBRARY_PATH", "")+":"+os.getcwd()+"/contrib/lib"
 		if os.path.exists("latest0.png"):
 			os.unlink("latest0.png")
-		error = subprocess.call(["./FLIRA65-Capture", "-e", "100", "-f", "1", "-p", "latest", "-t", "png"])
+		error = subprocess.call(["./FLIRA65-Capture", "-e", "100", "-f", "1", "-p", "single", "-t", "png"])
 		if error != 0:
 			print(bold(red("Error %d performing capture" % error)))
 		return
@@ -83,13 +91,16 @@ def parse_form(form):
 		s.save()
 		return
 		
+	os.system("date --set '%s'" % form.getvalue("date")) 
 
-	keys = ["directory", "maxFrames"]
+	keys = ["directory", "maxFrames", "date", "period", "bitdepth"]
 	s.status = {}
 	for k in keys:
 		s.status[k] = form.getvalue(k)
 
-	if type(s.status["maxFrames"]) != int:
+	try:
+		s.status["maxFrames"] = int(s.status["maxFrames"])
+	except:
 		s.status["maxFrames"] = -1
 
 	s.save()
@@ -144,12 +155,21 @@ if __name__ == "__main__":
 
 	boilerplate_start()
 	
+	for root, dirs, files in os.walk("."):
+		if "experiment" not in files:
+			continue
+		if s.status == None:
+			f = open(root+"/experiment","w")
+			f.write("Stopped\n")
+			f.close()
+			
+	
 	if "submitted" in form:
 		parse_form(form)
 		reload_page(1000)
 		
 	if s.status != None:
-		reload_page(1000)
+		reload_page(3000)
 
 	print('<form action="index.cgi">')
 	print("<pre id='status' style='display:block;'>")
@@ -164,17 +184,23 @@ if __name__ == "__main__":
 		action = "STOP"
 	else:
 		print("Waiting to configure New Experiment\n")
-		print("<b>\tData directory </b> <input name='directory' type='text' value='data/%s'></input>" % datetime.datetime.now().strftime("%F/%H:%M/"))
-		print("<b>\tMaximum Frames </b> <input name='maxFrames' type='number' value=''></input>")
+		print("<b>\tData directory    </b> <input id='directory' name='directory' type='text' value='data/'></input>")
+		print("<b>\tStart Time        </b> <input id='date' name='date' type='text' value='' readonly='readonly'></input>")
+		print("<b>\tMaximum Frames    </b> <input name='maxFrames' type='number' value=''></input>")
+		print("<b>\tSample Period(us) </b> <input name='period' type='number' value='0'></input>")
+		print("<b>\tBit depth         </b> <input name='bitdepth' type='radio' value='8' checked='yes'>Mono8</input> <input name='bitdepth' type='radio' value='14'>Mono14</input>")
 		action = "START"
 	print("</form>")
 	print("<hr>")
 	print("<input id='submitted' name='submitted' type='text' value='' style='display:none;'/>")
-	print("<input id='submit' type='submit' value='%s EXPERIMENT' onclick='document.getElementById(\"submit\").value=\"%s\"; document.getElementById(\"submitted\").value=\"%s\"'/>" % (action, action+"ING", action+"ING"))
+	print("<input id='submit' type='submit' value='%s EXPERIMENT' onclick='document.getElementById(\"submit\").value=\"%s\"; document.getElementById(\"submitted\").value=\"%s\"; loadTime();'/>" % (action, action+"ING", action+"ING"))
 	if s.status == None:
-		print("<input id='submit' type='submit' value='SINGLE CAPTURE' onclick='document.getElementById(\"submitted\").value=\"SINGLE\"'/>")
+		print("<input id='submit' type='submit' value='SINGLE CAPTURE' onclick='loadTime(); document.getElementById(\"submitted\").value=\"SINGLE\"'/>")
 	
 	print("</pre>")
+
+
+			
 
 	boilerplate_end()
 		

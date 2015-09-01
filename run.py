@@ -65,23 +65,24 @@ def main(argv):
 	s.status["currentFrame"] = 0
 	s.save()
 	lasttime = float(datetime.datetime.now().strftime("%s.%f"))
+	initialFiles = len([f for f in os.listdir("data") if 'png' in f])
+	maxFrames = int(s.status["maxFrames"])
 	while (s.status != None and (s.status["maxFrames"] < 0 or s.status["currentFrame"] < s.status["maxFrames"])):
 		s.load()
 		#error = subprocess.call(["./FLIRA65-Capture", "-f", "-1", "-D", s.status["directory"]])
-		child_process = subprocess.Popen(["./FLIRA65-Capture", "-f", "-1", "-D", s.status["directory"]])
-		child_process.wait()
-		#timestamp = float(datetime.datetime.now().strftime("%s.%f"))
-		#s.status["timestamp"] = timestamp
-		#
-		#if error == 0:
-		#	s.status["sampleRate"] = timestamp-lasttime
-		#	lasttime = timestamp
-		#	s.status["currentFrame"] += 1;
-		#	s.status["lastCapture"] = "Success"
-		#	shutil.copy2("latest0.png", s.status["directory"]+"/%.3f.png" % timestamp)
-		#else:
-		#	s.status["lastCapture"] = "Error"
-		s.status["message"] = "Error occured %d" % error
+		child_process = subprocess.Popen(["./FLIRA65-Capture", "-f", str(maxFrames), "-D", s.status["directory"], '-F', s.status["bitdepth"], '-T', s.status["period"]])
+		while child_process.poll() is None:
+			time.sleep(1)
+			files = [f for f in os.listdir("data") if 'png' in f]
+			s.status["currentFrame"] = len(files)-initialFiles
+			if len(files) == 0:
+				continue
+			latest = s.status["directory"]+"/"+files[-1]
+			s.status["lastFrame"] = "<a href='%s'>%s</a>" % (s.status["directory"]+"/"+files[-1], files[-1])
+			s.save()
+
+		if (maxFrames > 0):
+			maxFrames = maxFrames-s.status["currentFrame"]
 		s.save()
 		pass
 		

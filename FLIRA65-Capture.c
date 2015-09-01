@@ -5,6 +5,7 @@
 #include <aravis-0.4/arv.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 #include "savebuffer.h"
 
 static gboolean cancel = FALSE;
@@ -27,6 +28,8 @@ static int arv_option_max_errors_before_abort = 10;
 static char * arv_option_save_dir = ".";
 static char * arv_option_save_prefix = "";
 static char * arv_option_save_type = "png";
+static int arv_option_pixel_format = 8;
+static int arv_option_sample_period = 0;
 
 typedef bool(*SaveBuffer)(ArvBuffer*, const char*);
 static SaveBuffer save_buffer_fn = NULL;
@@ -61,11 +64,14 @@ static const GOptionEntry arv_option_entries[] =
 	{ "prefix", 'p',0, G_OPTION_ARG_STRING, &arv_option_save_prefix, "Prefix for frame files (defaults to Timestamp)", NULL},
 	{ "type", 't',0, G_OPTION_ARG_STRING, &arv_option_save_type, "Type of file to save frames as", NULL},
 	{ "errors", 'e', 0, G_OPTION_ARG_INT, &arv_option_max_errors_before_abort, "Errors before aborting", NULL},
+	{ "pixel-format", 'F', 0, G_OPTION_ARG_INT, &arv_option_pixel_format, "Pixel format", NULL},
+	{ "sample-period", 'T', 0, G_OPTION_ARG_INT, &arv_option_sample_period, "Sample period", NULL},
 	{ NULL }
 };
 
 int main (int argc, char **argv)
 {
+	
 	ArvCamera * camera;
 	ArvStream *stream;
 	ArvBuffer *buffer;
@@ -88,7 +94,6 @@ int main (int argc, char **argv)
 	}
 
 	g_option_context_free (context);
-	
 	if (arv_option_max_frames < 0)
 		arv_option_max_errors_before_abort = -1;
 	
@@ -124,20 +129,22 @@ int main (int argc, char **argv)
 	{
 		arv_stream_push_buffer (stream, arv_buffer_new (payload_size, NULL));
 	}
+	
+	arv_camera_stop_acquisition(camera);
 
 	// set the bit depth
 	ArvDevice * device = arv_camera_get_device(camera);
 	ArvGcNode * feature = arv_device_get_feature(device, "PixelFormat");
-	arv_gc_feature_node_set_value_from_string(ARV_GC_FEATURE_NODE(feature), "Mono16", NULL);
-	
-	feature = arv_device_get_feature(device, "TemperatureLinearMode");
-	arv_gc_feature_node_set_value_from_string(ARV_GC_FEATURE_NODE(feature), "On", NULL);
-	
-	feature = arv_device_get_feature(device, "TemperatureLinearResolution");
-	arv_gc_feature_node_set_value_from_string(ARV_GC_FEATURE_NODE(feature), "High", NULL);
+	char * pix_format = "Mono8";
+	if (arv_option_pixel_format == 14)
+		pix_format = "Mono14";
+	arv_gc_feature_node_set_value_from_string(ARV_GC_FEATURE_NODE(feature), pix_format, NULL);
+	if (arv_option_pixel_format == 14)
+	{
+		feature = arv_device_get_feature(device, "CMOSBitDepth");
+		arv_gc_feature_node_set_value_from_string(ARV_GC_FEATURE_NODE(feature), "bit14bit", NULL);
+	}
 
-	feature = arv_device_get_feature(device, "ImageAdjustMethod");
-	arv_gc_feature_node_set_value_from_string(ARV_GC_FEATURE_NODE(feature), "Linear", NULL);
 
 	signal (SIGINT, set_cancel);
 	signal (SIGQUIT, set_cancel);
@@ -179,8 +186,13 @@ int main (int argc, char **argv)
 						set_cancel(SIGQUIT);
 					}
 					g_print("Saved frame %d to %s\n", captured_frames, filename);
+					char latest[] = "latest.png";
+					sprintf(latest, "latest.%s", arv_option_save_type);
+					unlink(latest);
+					symlink(filename, latest);
 				}
 				captured_frames++;
+				g_usleep(arv_option_sample_period);
 			}
 			else 
 			{
