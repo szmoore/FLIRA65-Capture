@@ -154,14 +154,6 @@ if __name__ == "__main__":
 		
 
 	boilerplate_start()
-	
-	for root, dirs, files in os.walk("."):
-		if "experiment" not in files:
-			continue
-		if s.status == None:
-			f = open(root+"/experiment","w")
-			f.write("Stopped\n")
-			f.close()
 			
 	
 	if "submitted" in form:
